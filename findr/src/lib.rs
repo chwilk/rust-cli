@@ -88,30 +88,42 @@ pub fn get_args() -> MyResult<Config> {
 }
 
 pub fn run(config: Config) -> MyResult<()> {
+    let filter_type = |entry: &DirEntry| {
+        config.entry_types.is_empty()
+        || config
+            .entry_types
+            .iter()
+            .any(|entry_type| match entry_type {
+                    Link => entry.file_type().is_symlink(),
+                    Dir => entry.file_type().is_dir(),
+                    File => entry.file_type().is_file(),
+                }
+            )
+    };
+
+    let filter_name = |entry: &DirEntry| {
+        config.names.is_empty()
+        || config
+            .names
+            .iter()
+            .any(|re| re.is_match(&entry.file_name().to_string_lossy()))
+    };
+
     for path in config.paths {
-        for file in WalkDir::new(path) {
-            match file {
-                Err(e) => eprintln!("{}", e),
-                Ok(entry) => {
-                    if (config.entry_types.is_empty()
-                        || config.entry_types.iter().any(|entry_type| {
-                            match entry_type {
-                                Link => entry.file_type().is_symlink(),
-                                Dir => entry.file_type().is_dir(),
-                                File => entry.file_type().is_file(),
-                            }
-                        }))
-                        && (config.names.is_empty()
-                            || config.names.iter().any(|re| {
-                                re.is_match(&entry.file_name().to_string_lossy())
-                            })
-                        )
-                    {
-                        println!("{}", entry.path().display());
-                    }
-                },
-            }
-        }
+        let entries = WalkDir::new(path)
+            .into_iter()
+            .filter_map(|e| match e {
+                Err(e) => {
+                    eprintln!("{}", e);
+                    None
+                }
+                Ok(entry) => Some(entry),
+            })
+            .filter(filter_type)
+            .filter(filter_name)
+            .map(|entry| entry.path().display().to_string())
+            .collect::<Vec<_>>();
+        println!("{}", entries.join("\n"));
     }
 
     Ok(())
