@@ -49,7 +49,7 @@ fn dies_bad_name() -> TestResult {
 // --------------------------------------------------
 #[test]
 fn dies_bad_type() -> TestResult {
-    let expected = "error: 'x' isn't a valid value for '--type <TYPE>...'";
+    let expected = "error: \"x\" isn't a valid value for '--type <TYPE>'";
     Command::cargo_bin(PRG)?
         .args(&["--type", "x"])
         .assert()
@@ -219,7 +219,7 @@ fn type_l() -> TestResult {
 #[test]
 fn type_f_l() -> TestResult {
     run(
-        &["tests/inputs", "-t", "l", "f"],
+        &["tests/inputs", "-t", "l", "-t", "f"],
         "tests/expected/type_f_l.txt",
     )
 }
